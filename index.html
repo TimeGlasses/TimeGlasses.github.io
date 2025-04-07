@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>24-Hour Vertical Progress Clock</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        
+        .clock-container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+        }
+        
+        .clock-face {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: #e0e0e0;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .day-progress {
+            position: absolute;
+            width: 155px;
+            height: 155px;
+            border-radius: 50%;
+            background: linear-gradient(to top, #1e3a7f var(--day-percentage), #99aae1 var(--day-percentage));
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9;
+        }
+        
+        .countdown-pie {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            clip-path: circle(50% at 50% 50%);
+            /* background: conic-gradient(#e0e0e0 var(--percentage), #3f237b var(--percentage), #4CAF50 100%); */
+            background: conic-gradient(#e0e0e0 var(--percentage), #5836a0 var(--percentage), #9b7ae4 100%);
+            transform: rotate(0deg);
+            z-index: 2;
+        }
+        
+        .digital-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+        
+        .time {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .date {
+            font-size: 1rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .hour-markers {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .time-markers {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .invisiblemarker {
+            position: absolute;
+            width: 1px;
+            height: 451px;
+            background: transparent;
+            left: 50%;
+            top: -6%;
+            transform-origin: center && center;
+            text-align: center;
+            font-size: 0.9rem;
+            z-index: 1;
+        }
+        
+        .marker { 
+            position: absolute;
+            width: 1px;
+            height: 410px;
+            background: #333;
+            left: 50%;
+            top: -1.25%;
+            transform-origin: center && center;
+            z-index: 1;
+        }
+
+        }
+    </style>
+</head>
+<body>
+    <div class="clock-container">
+        <div class="clock-face">
+            <div class="day-progress" id="dayProgress"></div>
+            <div class="countdown-pie" id="countdownPie"></div>
+            <div class="hour-markers" id="hourMarkers"></div>
+            <div class="time-markers" id="timeMarkers"></div> 
+            <div class="minute-markers" id="minuteMarkers"></div>
+            <div class="digital-display">
+                <div class="time" id="timeDisplay">00:00:00</div>
+                <div class="date" id="dateDisplay">Jan 1, 2023</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const countdownPie = document.getElementById('countdownPie');
+        const dayProgress = document.getElementById('dayProgress');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const dateDisplay = document.getElementById('dateDisplay');
+        const hourMarkers = document.getElementById('hourMarkers');
+        const timeMarkers = document.getElementById('timeMarkers');
+        const minuteMarkers = document.getElementById('minuteMarkers');
+        
+        // LINES for the 5-minute interval markers
+        for (let i = 0; i < 12; i++) {
+            const marker = document.createElement('div');
+            marker.className = 'marker';
+            marker.style.transform = `rotate(${i * 30}deg)`;
+            hourMarkers.appendChild(marker);
+        }
+        
+        // NUMBERS for the 5-minute interval markers
+        for (let i = 0; i < 12; i++) {
+            const invisiblemarker = document.createElement('div');
+            invisiblemarker.className="invisiblemarker";
+            invisiblemarker.style.transform = `rotate(${(i * 30) - 1.4}deg)`;
+            invisiblemarker.textContent = i * 5;
+            timeMarkers.appendChild(invisiblemarker);
+        }
+
+        // Create 1 minute interval markers
+        for (let i = 0; i < 12; i++) {
+            for (let j = 1; j < 5; j++) {
+                const marker = document.createElement('div');
+                marker.className = 'minute-marker';
+                marker.style.transform = `rotate(${i * 30 + j * 6}deg)`;
+                minuteMarkers.appendChild(marker);
+            }
+        }
+        
+        function updateClock() {
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const seconds = now.getSeconds();
+            
+            // Format time display
+            timeDisplay.textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            
+            // Format date display
+            const options = { month: 'short', day: 'numeric', year: 'numeric' };
+            dateDisplay.textContent = now.toLocaleDateString('en-US', options);
+            
+            // Calculate percentage of hour elapsed (0-100)
+            const minutesElapsed = minutes + (seconds / 60);
+            const percentage = (minutesElapsed / 60) * 100;
+            
+           // Calculate percentage of active day elapsed (9am-11pm = 14 hours)
+            const startHour = 10; // 10:30am
+            const endHour = 22; // 11pm
+            const totalDaySeconds = (endHour - startHour) * 3600; // 14 hours in seconds
+
+            let secondsElapsedToday = hours * 3600 + minutes * 60 + seconds;
+            // Adjust for 9am start time
+            secondsElapsedToday = Math.max(0, secondsElapsedToday - (startHour * 3600));
+            // Cap at 11pm
+            secondsElapsedToday = Math.min(secondsElapsedToday, totalDaySeconds);
+
+            const dayPercentage = (secondsElapsedToday / totalDaySeconds) * 100;
+            
+            // Update pie countdown (starts full and counts down)
+            countdownPie.style.setProperty('--percentage', `${percentage}%`);
+            
+            // Update day progress (fills vertically from bottom to top)
+            dayProgress.style.setProperty('--day-percentage', `${dayPercentage}%`);
+        }
+        
+        // Update immediately and then every second
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>
